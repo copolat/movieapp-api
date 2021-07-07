@@ -1,6 +1,7 @@
 var express = require("express");
 var router = express.Router();
 var bcrypt = require("bcrypt");
+var jwt = require("jsonwebtoken");
 // Model
 const UserModel = require("../models/User");
 
@@ -22,5 +23,32 @@ router.post("/register", (req, res, next) => {
       });
   });
 });
+
+// Create a token  users/authenticate
+router.post('/authenticate',(req,res)=>{
+  const {username, password} = req.body
+  UserModel.findOne({username})
+  .then((resultUser)=>{
+    if(!resultUser) {
+      res.send("The user was not found...")
+    } else {
+      bcrypt.compare(password, resultUser.password)
+      .then( function(result){
+        if(!result){
+          res.json("Authetication failed: Wrong password...")
+        }else{
+          //res.json("OK, token is ready...")
+          const payload={username}
+          var token = jwt.sign(payload,req.app.get("api_secret_key"), {expiresIn:7200 /*1h*/})
+          res.json({status:true, token})
+        }
+      })
+    }
+    //res.json(resultUser)
+  })
+  .catch((err) => {
+    next({ message: err });
+  })
+})
 
 module.exports = router;
